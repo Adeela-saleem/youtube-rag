@@ -44,7 +44,7 @@ def rate_limit(name: str, default_per_hour: int):
         if len(q) >= limit:
             raise HTTPException(
                 status_code=429,
-                detail="Bohat zyada requests ho gayi hain. Thori der (kuch minute) baad dobara try karo.",
+                detail="Too many requests. Please wait a few minutes and try again.",
             )
         q.append(now)
 
@@ -87,9 +87,9 @@ def load(req: LoadReq):
     try:
         return rag.load_video(req.url)
     except rag.TranslationError as e:
-        raise HTTPException(status_code=503, detail=f"Translation nahi ho saki: {e}")
+        raise HTTPException(status_code=503, detail=f"Translation failed: {e}")
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Transcript nahi mili: {e}")
+        raise HTTPException(status_code=400, detail=f"Could not get a transcript: {e}")
 
 
 @app.post("/chat", dependencies=[Depends(rate_limit("chat", 60))])
@@ -98,9 +98,9 @@ def chat(req: ChatReq):
         history = [h.model_dump() for h in req.history[-6:]]
         return rag.ask(req.video_id, req.question, history, req.language)
     except KeyError:
-        raise HTTPException(status_code=404, detail="Pehle video load karo")
+        raise HTTPException(status_code=404, detail="Please load the video first.")
     except Exception as e:
-        raise HTTPException(status_code=503, detail=f"Model error (busy ho sakta hai): {e}")
+        raise HTTPException(status_code=503, detail=f"Model error (it may be busy): {e}")
 
 
 @app.post("/overview", dependencies=[Depends(rate_limit("overview", 30))])
@@ -108,9 +108,9 @@ def overview(req: OverviewReq):
     try:
         return rag.overview(req.video_id, req.language)
     except KeyError:
-        raise HTTPException(status_code=404, detail="Pehle video load karo")
+        raise HTTPException(status_code=404, detail="Please load the video first.")
     except Exception as e:
-        raise HTTPException(status_code=503, detail=f"Overview nahi ban saka: {e}")
+        raise HTTPException(status_code=503, detail=f"Could not create the overview: {e}")
 
 
 @app.post("/transcript", dependencies=[Depends(rate_limit("transcript", 20))])
@@ -118,8 +118,8 @@ def transcript(req: TranscriptReq):
     try:
         return rag.get_transcript(req.video_id, req.lang)
     except KeyError:
-        raise HTTPException(status_code=404, detail="Pehle video load karo")
+        raise HTTPException(status_code=404, detail="Please load the video first.")
     except rag.TranslationError as e:
-        raise HTTPException(status_code=503, detail=f"Translation nahi ho saki: {e}")
+        raise HTTPException(status_code=503, detail=f"Translation failed: {e}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Transcript nahi mil saki: {e}")
+        raise HTTPException(status_code=500, detail=f"Could not get the transcript: {e}")

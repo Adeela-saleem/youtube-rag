@@ -13,7 +13,7 @@ export default function UrlInput({ onLoad, loading }) {
       <input
         value={url}
         onChange={(e) => setUrl(e.target.value)}
-        placeholder="YouTube video ka link paste karo..."
+        placeholder="Paste a YouTube video link..."
         className="flex-1 rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-3 text-sm outline-none focus:border-red-500"
       />
       <button

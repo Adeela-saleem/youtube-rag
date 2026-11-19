@@ -8,7 +8,7 @@ export default function ErrorBox({ message, hint, onRetry }) {
           onClick={onRetry}
           className="mt-3 rounded-lg bg-red-600 px-4 py-1.5 text-xs font-medium hover:bg-red-500"
         >
-          Dobara try karo
+          Try again
         </button>
       )}
     </div>

@@ -9,11 +9,11 @@ async function post(path, body) {
       body: JSON.stringify(body),
     });
   } catch {
-    throw new Error("Backend se connect nahi ho paya. Kya server chal raha hai?");
+    throw new Error("Couldn't reach the server. Is the backend running?");
   }
 
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.detail || "Kuch galat ho gaya");
+  if (!res.ok) throw new Error(data.detail || "Something went wrong");
   return data;
 }
 

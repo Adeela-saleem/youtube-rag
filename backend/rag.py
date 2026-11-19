@@ -69,7 +69,7 @@ class GeminiEmbeddings(Embeddings):
                             time.sleep(3)           # rate limit: thora ruk ke dobara
                             continue
                         break
-        raise RuntimeError(f"Embeddings nahi ban sakin: {last_error}")
+        raise RuntimeError(f"Could not create embeddings: {last_error}")
 
     def embed_documents(self, texts):
         out = []
@@ -155,7 +155,7 @@ def _call_llm(prompt: str) -> str:
             return get_text(llm.invoke(prompt))
         except Exception as e:  # 503 / 404 / quota -> agla model
             last_error = e
-    raise RuntimeError(f"Saare models fail hue: {last_error}")
+    raise RuntimeError(f"All models failed: {last_error}")
 
 
 # ---------------------------------------------------------------- transcript + translation
@@ -200,17 +200,17 @@ def transcribe_with_gemini(vid: str):
             if len(segs) >= 3:
                 segs.sort(key=lambda x: x["start"])
                 return segs
-            last_error = "Gemini se transcript nahi bani"
+            last_error = "Gemini returned no usable transcript"
         except Exception as e:
             last_error = e
-    raise RuntimeError(f"Gemini audio transcription fail: {last_error}")
+    raise RuntimeError(f"Gemini audio transcription failed: {last_error}")
 
 
 def fetch_transcript(vid: str):
     """Jo transcript available ho wo nikalta hai. English ko tarjeeh, phir Hindi/Urdu, phir koi bhi."""
     transcripts = list(_yt_api().list(vid))
     if not transcripts:
-        raise ValueError("Is video ke captions available nahi hain")
+        raise ValueError("This video has no captions available")
 
     def pick():
         for t in transcripts:
@@ -294,7 +294,7 @@ def load_video(url: str) -> dict:
             orig = transcribe_with_gemini(vid)
         except Exception as gemini_error:
             raise ValueError(
-                f"Captions nahi mile ({caption_error}). Gemini se audio transcribe bhi nahi ho saki: {gemini_error}"
+                f"No captions found ({caption_error}). Audio transcription with Gemini also failed: {gemini_error}"
             )
         t, is_english, ai_transcribed = None, True, True      # Gemini ne English me hi di
         lang_code, lang_name = "en", "English (Gemini audio transcription)"
@@ -305,7 +305,7 @@ def load_video(url: str) -> dict:
     else:
         if len(orig) > MAX_TRANSLATE_SNIPPETS:
             raise TranslationError(
-                "Is video ki transcript translate karne ke liye bohat lambi hai. Chhoti video try karo."
+                "This video's transcript is too long to translate. Please try a shorter video."
             )
         texts = [s["text"] for s in orig]
         en_texts, failed, total = translate_lines(texts, "english", t.language)
@@ -319,7 +319,7 @@ def load_video(url: str) -> dict:
                 en = [{"start": int(s.start), "text": s.text.replace("\n", " ").strip()} for s in yt]
             except Exception:
                 raise TranslationError(
-                    "Transcript English me convert nahi ho saki (model busy ho sakta hai). Thori der baad try karo."
+                    "Could not convert the transcript to English (the model may be busy). Please try again later."
                 )
         else:
             en = [{"start": o["start"], "text": tx} for o, tx in zip(orig, en_texts)]
@@ -354,7 +354,7 @@ def load_video(url: str) -> dict:
 def get_transcript(video_id: str, lang: str = "english") -> dict:
     """Transcript panel ke liye: english / original / roman_urdu."""
     if video_id not in _en_segs:
-        raise KeyError("Video load nahi hui")
+        raise KeyError("Video not loaded")
 
     partial = False
     if lang == "original":
@@ -365,7 +365,7 @@ def get_transcript(video_id: str, lang: str = "english") -> dict:
             label = _meta[video_id]["source_language_name"] or "the source language"
             out, failed, total = translate_lines([s["text"] for s in orig], "roman_urdu", label)
             if total and failed == total:
-                raise TranslationError("Roman Urdu me convert nahi ho saki (model busy ho sakta hai). Thori der baad try karo.")
+                raise TranslationError("Could not convert to Roman Urdu (the model may be busy). Please try again later.")
             _roman[video_id] = {
                 "segs": [{"start": o["start"], "text": tx} for o, tx in zip(orig, out)],
                 "partial": failed > 0,
@@ -427,7 +427,7 @@ Latest question: {question}"""
 
 def ask(video_id: str, question: str, history=None, language: str = "auto") -> dict:
     if video_id not in _stores:
-        raise KeyError("Video load nahi hui")
+        raise KeyError("Video not loaded")
 
     history = history or []
     last_q = next((m["text"] for m in reversed(history) if m["role"] == "user"), "")
@@ -459,7 +459,7 @@ Rules:
 2b. EXTERNAL EXAMPLE: if the user EXPLICITLY asks for an example or explanation from OUTSIDE the video
    (for example "apart from the video", "video ke ilawa", "video ke bahar", "real life example"):
    do NOT retell the video. Start your reply with [EXTERNAL], then a short label line such as
-   "💡 Video ke bahar se:" (written in the answer's language), then 1-2 fresh, simple real-world
+   "💡 From outside the video:" (written in the answer's language), then 1-2 fresh, simple real-world
    examples of the SAME concept (from your own knowledge), each starting with "Example:".
    Use the chat history to know which concept they mean, and add one line connecting it to the video's idea.
 3. If the question is unrelated to this video's topic, start your reply with [NOT_FOUND].
@@ -502,7 +502,7 @@ def _parse_json(raw: str) -> dict:
 def overview(video_id: str, language: str = "auto") -> dict:
     """Video ka chhota summary + 5 suggested questions (chuni hui zubaan me)."""
     if video_id not in _texts:
-        raise KeyError("Video load nahi hui")
+        raise KeyError("Video not loaded")
     key = (video_id, language)
     if key in _overviews:
         return _overviews[key]

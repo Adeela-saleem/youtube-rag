@@ -2,7 +2,7 @@ export default function OverviewCard({ overview, failed, onAsk, disabled }) {
   if (failed) {
     return (
       <p className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4 text-sm text-neutral-400">
-        Summary abhi nahi ban saki (model busy ho sakta hai), lekin aap seedha sawal pooch sakte hain.
+        The summary couldn't be generated right now (the model may be busy), but you can still ask questions directly.
       </p>
     );
   }
@@ -12,14 +12,14 @@ export default function OverviewCard({ overview, failed, onAsk, disabled }) {
     <div className="space-y-4 rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
       <div>
         <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-neutral-400">
-          Is video me kya hai
+          About this video
         </h3>
         <p className="text-sm leading-relaxed text-neutral-200">{overview.summary}</p>
       </div>
 
       <div>
         <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">
-          Ye puch kar dekho
+          Try asking
         </h3>
         <div className="flex flex-wrap gap-2">
           {overview.questions.map((q) => (

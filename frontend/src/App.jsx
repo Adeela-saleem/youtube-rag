@@ -8,27 +8,30 @@ import ErrorBox from "./components/ErrorBox.jsx";
 import TranscriptPanel from "./components/TranscriptPanel.jsx";
 import { loadVideo, askQuestion, getOverview } from "./api.js";
 
-// Backend ke technical errors ko friendly message me badalta hai
+// Turn raw backend errors into friendly messages
 function friendlyError(message) {
-  if (message.includes("Transcript nahi mili")) {
+  if (message.includes("Could not get a transcript")) {
     return {
-      message: "Is video ka transcript nahi mil paya.",
-      hint: "Captions nahi mile aur audio se bhi transcript nahi ban saki. Video private ya bohat lambi ho sakti hai, ya server par YouTube ne rok diya ho. Koi doosri (public, chhoti) video try karo.",
+      message: "Couldn't get a transcript for this video.",
+      hint: "It may have no captions, be private or very long, or YouTube may be blocking the server. Try another public, shorter video.",
     };
   }
-  if (message.includes("Translation nahi")) {
+  if (message.includes("Translation failed")) {
     return {
-      message: "Transcript translate nahi ho saki.",
-      hint: "Gemini abhi busy ho sakta hai. Thori der baad dobara try karo.",
+      message: "Couldn't translate the transcript.",
+      hint: message.replace("Translation failed:", "").trim() || "Gemini may be busy. Please try again in a bit.",
     };
   }
-  if (message.includes("connect nahi")) {
+  if (message.includes("Couldn't reach the server")) {
     return {
-      message: "Server se connect nahi ho paya.",
-      hint: "Check karo ke backend (uvicorn) chal raha hai.",
+      message: "Couldn't reach the server.",
+      hint: "The free backend may be waking up (it can take up to a minute). Please try again shortly.",
     };
   }
-  return { message: "Kuch galat ho gaya.", hint: message };
+  if (message.includes("Too many requests")) {
+    return { message: "Too many requests.", hint: "Please wait a few minutes and try again." };
+  }
+  return { message: "Something went wrong.", hint: message };
 }
 
 export default function App() {
@@ -46,7 +49,7 @@ export default function App() {
   const [rightTab, setRightTab] = useState("chat");   // "chat" | "transcript"
 
 
-  // Jawab ki zubaan badle to summary aur suggested sawal bhi us zubaan me
+  // Refresh the summary and suggested questions when the answer language changes
   const firstRun = useRef(true);
   useEffect(() => {
     if (firstRun.current) { firstRun.current = false; return; }
@@ -74,7 +77,7 @@ export default function App() {
       try {
         setOverview(await getOverview(v.video_id, language));
       } catch {
-        setOverviewFailed(true);   // summary fail ho to bhi chat chalegi
+        setOverviewFailed(true);   // chat still works if the summary fails
       }
     } catch (e) {
       setError(friendlyError(e.message));
@@ -86,7 +89,7 @@ export default function App() {
   const handleSend = async (question) => {
     if (!video || thinking) return;
 
-    // Chat memory: pichle 6 messages (error wale messages chhod ke) backend ko bhejo
+    // Chat memory: send the last 6 messages (excluding errors) to the backend
     const history = messages
       .filter((m) => !m.text.startsWith("⚠️"))
       .slice(-6)
@@ -117,7 +120,7 @@ export default function App() {
       <header>
         <h1 className="text-2xl font-semibold">🎥 YouTube RAG Chatbot</h1>
         <p className="mt-1 text-sm text-neutral-400">
-          Kisi bhi YouTube video se sawal pucho, jawab timestamps ke saath milega.
+          Ask questions about any YouTube video. Answers come with clickable timestamps.
         </p>
       </header>
 
@@ -134,15 +137,16 @@ export default function App() {
             <VideoCard video={video} startAt={startAt} autoplay={autoplay} />
             {video.ai_transcribed && (
               <p className="rounded-xl border border-yellow-900 bg-yellow-950/40 px-4 py-3 text-sm text-yellow-200">
-                Is video ke captions available nahi the, isliye Gemini ne <b>audio sun kar</b> transcript banayi hai.
-                Isme galtiyan ho sakti hain aur timestamps thore idhar udhar ho sakte hain.
+                This video had no captions, so Gemini transcribed the <b>audio</b>.
+                It may contain mistakes, and timestamps can be slightly off.
               </p>
             )}
             {video.translated && (
               <p className="rounded-xl border border-blue-900 bg-blue-950/40 px-4 py-3 text-sm text-blue-200">
-                Ye video <b>{video.source_language_name}</b> me thi. Transcript English me translate ho gayi hai
-                {video.partial ? " (kuch lines translate nahi ho saein)" : ""}. Roman Urdu ya original
-                dekhne ke liye <button className="underline" onClick={() => setRightTab("transcript")}>Transcript tab</button> kholo.
+                This video was in <b>{video.source_language_name}</b>. The transcript has been translated to English
+                {video.partial ? " (some lines could not be translated)" : ""}. Open the{" "}
+                <button className="underline" onClick={() => setRightTab("transcript")}>Transcript tab</button>{" "}
+                to read it in English, Roman Urdu or the original.
               </p>
             )}
             {stage === "summary" && <LoadingSteps stage="summary" />}

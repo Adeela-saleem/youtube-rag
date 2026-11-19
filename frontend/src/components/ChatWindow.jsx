@@ -2,11 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import Message from "./Message.jsx";
 
 const LANGUAGES = [
-  { value: "auto", label: "Auto (sawal ki zubaan)" },
+  { value: "auto", label: "Auto (same as question)" },
   { value: "english", label: "English" },
   { value: "roman_urdu", label: "Roman Urdu" },
-  { value: "hindi", label: "हिन्दी" },
-  { value: "urdu", label: "اردو" },
+  { value: "hindi", label: "Hindi" },
+  { value: "urdu", label: "Urdu" },
 ];
 
 export default function ChatWindow({
@@ -34,7 +34,7 @@ export default function ChatWindow({
         <h3 className="text-sm font-medium">Chat</h3>
         <div className="flex items-center gap-3">
           <label className="flex items-center gap-1.5 text-xs text-neutral-400">
-            Jawab:
+            Answer in:
             <select
               value={language}
               onChange={(e) => onLanguage(e.target.value)}
@@ -56,9 +56,9 @@ export default function ChatWindow({
       <div className="flex-1 space-y-3 overflow-y-auto p-4">
         {messages.length === 0 && (
           <div className="mt-10 space-y-2 text-center text-sm text-neutral-500">
-            <p>Video load ho gayi 🎉</p>
-            <p>Left side ke suggested sawal par click karo, ya neeche apna sawal likho.</p>
-            <p className="text-xs">Tip: "samajh nahi aaya" ya "example do" bhi likh sakti ho.</p>
+            <p>Video loaded 🎉</p>
+            <p>Click a suggested question on the left, or type your own below.</p>
+            <p className="text-xs">Tip: you can also say "I didn't understand" or "give me an example".</p>
           </div>
         )}
         {messages.map((m, i) => (
@@ -70,7 +70,7 @@ export default function ChatWindow({
             showFollowups={i === lastIndex && !thinking}
           />
         ))}
-        {thinking && <p className="text-sm text-neutral-500">Soch rahi hoon...</p>}
+        {thinking && <p className="text-sm text-neutral-500">Thinking...</p>}
         <div ref={endRef} />
       </div>
 
@@ -78,7 +78,7 @@ export default function ChatWindow({
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Video ke baare me sawal likho..."
+          placeholder="Ask a question about the video..."
           className="flex-1 rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm outline-none focus:border-red-500"
         />
         <button

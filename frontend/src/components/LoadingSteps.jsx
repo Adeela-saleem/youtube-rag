@@ -1,6 +1,6 @@
 const STEPS = [
-  { key: "transcript", label: "Transcript nikal rahi hoon (Hindi/doosri zubaan ho to English me translate hogi, 1-2 minute lag sakte hain)" },
-  { key: "summary", label: "Video samajh rahi hoon (summary + sawal)" },
+  { key: "transcript", label: "Fetching the transcript (non-English videos are translated to English, which can take 1-2 minutes)" },
+  { key: "summary", label: "Understanding the video (summary + suggested questions)" },
 ];
 
 export default function LoadingSteps({ stage }) {

@@ -52,7 +52,7 @@ export default function TranscriptPanel({ video, onSeek }) {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Transcript me dhoondo..."
+          placeholder="Search the transcript..."
           className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-1.5 text-xs outline-none focus:border-red-500"
         />
       </div>
@@ -61,18 +61,18 @@ export default function TranscriptPanel({ video, onSeek }) {
         {loading && (
           <p className="p-3 text-sm text-neutral-400">
             {tab === "roman_urdu"
-              ? "Roman Urdu me convert ho raha hai... (lambi video me 1-2 minute lag sakte hain)"
-              : "Load ho raha hai..."}
+              ? "Converting to Roman Urdu... (can take 1-2 minutes for long videos)"
+              : "Loading..."}
           </p>
         )}
         {error && <p className="p-3 text-sm text-red-300">{error}</p>}
         {data?.partial && (
           <p className="mb-2 rounded-lg bg-yellow-950/40 p-2 text-xs text-yellow-200/80">
-            Kuch lines translate nahi ho saein (model busy tha), wo original zubaan me hain.
+            Some lines could not be translated (the model was busy) and are shown in the original language.
           </p>
         )}
         {!loading && data && lines.length === 0 && (
-          <p className="p-3 text-sm text-neutral-500">Kuch nahi mila.</p>
+          <p className="p-3 text-sm text-neutral-500">No matches found.</p>
         )}
         <div className="space-y-1">
           {lines.map((l, i) => (
