@@ -11,14 +11,77 @@ from dotenv import load_dotenv
 from youtube_transcript_api import YouTubeTranscriptApi
 from langchain_core.documents import Document
 from langchain_community.vectorstores import FAISS
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_core.embeddings import Embeddings
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 load_dotenv()
 os.environ["GOOGLE_API_KEY"] = os.getenv("GEMINI_API_KEY", "")
 
-# Free, local embeddings. Transcript English me convert hoti hai, isliye English model kaafi hai.
-embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+
+
+class GeminiEmbeddings(Embeddings):
+    """Gemini API se embeddings (torch/sentence-transformers ki zaroorat nahi, free Render ki kam RAM me chalta hai).
+    Model ka naam EMBEDDING_MODEL env se badal sakte ho; na mile to account ke embedding models me se khud chunta hai."""
+
+    def __init__(self):
+        self._client = None
+        self._model = None            # jo model kaam kar gaya, wahi aage use hota hai (dimension same rehne ke liye)
+
+    def _get_client(self):
+        if self._client is None:
+            from google import genai
+            self._client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
+        return self._client
+
+    def _candidates(self):
+        if self._model:
+            return [self._model]
+        names = [os.getenv("EMBEDDING_MODEL", "gemini-embedding-001")]
+        try:
+            for m in self._get_client().models.list():
+                n = m.name.replace("models/", "")
+                if "embedding" in n and "embedContent" in (getattr(m, "supported_actions", None) or []) and n not in names:
+                    names.append(n)
+        except Exception:
+            pass
+        return names
+
+    @staticmethod
+    def _normalize(vec):
+        norm = sum(x * x for x in vec) ** 0.5 or 1.0
+        return [x / norm for x in vec]
+
+    def _embed(self, texts, task_type):
+        from google.genai import types
+
+        client, last_error = self._get_client(), None
+        for name in self._candidates():
+            for use_task in (True, False):          # kuch models task_type support nahi karte
+                for attempt in range(2):
+                    try:
+                        cfg = types.EmbedContentConfig(task_type=task_type) if use_task else None
+                        resp = client.models.embed_content(model=name, contents=texts, config=cfg)
+                        self._model = name
+                        return [self._normalize(list(e.values)) for e in resp.embeddings]
+                    except Exception as e:
+                        last_error = e
+                        if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+                            time.sleep(3)           # rate limit: thora ruk ke dobara
+                            continue
+                        break
+        raise RuntimeError(f"Embeddings nahi ban sakin: {last_error}")
+
+    def embed_documents(self, texts):
+        out = []
+        for i in range(0, len(texts), 50):         # ek call me 50 chunks
+            out.extend(self._embed(texts[i:i + 50], "RETRIEVAL_DOCUMENT"))
+        return out
+
+    def embed_query(self, text):
+        return self._embed([text], "RETRIEVAL_QUERY")[0]
+
+
+embeddings = GeminiEmbeddings()
 
 # Models ki list: ek busy (503) ho to agla try hota hai
 MODEL_NAMES = [m.strip() for m in os.getenv(

@@ -4,7 +4,6 @@ python-dotenv
 youtube-transcript-api
 langchain-core
 langchain-community
-langchain-huggingface
-sentence-transformers
 langchain-google-genai
+google-genai
 faiss-cpu
